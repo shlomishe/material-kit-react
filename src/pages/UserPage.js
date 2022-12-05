@@ -1,7 +1,8 @@
+import { read, utils, writeFileXLSX } from 'xlsx';
 import { Helmet } from 'react-helmet-async';
 import { filter } from 'lodash';
 import { sentenceCase } from 'change-case';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 // @mui
 import {
   Card,
@@ -28,19 +29,19 @@ import Iconify from '../components/iconify';
 import Scrollbar from '../components/scrollbar';
 // sections
 import { UserListHead, UserListToolbar } from '../sections/@dashboard/user';
-// mock
-import USERLIST from '../_mock/user';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'name', label: 'Name', alignRight: false },
-  { id: 'company', label: 'Company', alignRight: false },
-  { id: 'role', label: 'Role', alignRight: false },
-  { id: 'isVerified', label: 'Verified', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'name', label: 'שם', alignRight: false },
+  { id: 'date', label: 'תאריך', alignRight: false },
+  { id: 'phone', label: 'טלפון', alignRight: false },
+  { id: 'count', label: 'כמות', alignRight: false },
+  { id: 'status', label: 'סטוטוס', alignRight: false },
   { id: '' },
 ];
+
+// const USERLIST = [];
 
 // ----------------------------------------------------------------------
 
@@ -53,13 +54,11 @@ function descendingComparator(a, b, orderBy) {
   }
   return 0;
 }
-
 function getComparator(order, orderBy) {
   return order === 'desc'
     ? (a, b) => descendingComparator(a, b, orderBy)
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
-
 function applySortFilter(array, comparator, query) {
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
@@ -68,12 +67,13 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (_user) => _user.name.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (_user) => _user?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis.map((el) => el[0]);
 }
 
 export default function UserPage() {
+
   const [open, setOpen] = useState(null);
 
   const [page, setPage] = useState(0);
@@ -87,6 +87,37 @@ export default function UserPage() {
   const [filterName, setFilterName] = useState('');
 
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const [USERLIST, setUsersList] = useState([]);
+
+
+  const readUploadFile = (e) => {
+    e.preventDefault();
+    if (e.target.files) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target.result;
+        const workbook = read(data);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = utils.sheet_to_json(worksheet);
+        const userList = [];
+        json.forEach((guest, i) => {
+          userList.push({
+            name: guest.name,
+            phone: guest.phone,
+            count: guest.count,
+            date: new Date().toString(),
+            status: 'active',
+            id: i,
+          });
+        });
+        setUsersList(userList);
+      };
+      reader.readAsArrayBuffer(e.target.files[0]);
+    }
+  };
+
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -155,11 +186,16 @@ export default function UserPage() {
       <Container>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom>
-            User
+            רשימת מוזמנים
           </Typography>
           <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />}>
             New User
           </Button>
+
+          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />}>
+            יבוא מוזמנים
+          </Button>
+          <input type="file" name="upload" id="upload" onChange={readUploadFile} />
         </Stack>
 
         <Card>
@@ -179,7 +215,7 @@ export default function UserPage() {
                 />
                 <TableBody>
                   {filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { id, name, role, status, company, avatarUrl, isVerified } = row;
+                    const { id, name, date, phone, count, status } = row;
                     const selectedUser = selected.indexOf(name) !== -1;
 
                     return (
@@ -190,19 +226,15 @@ export default function UserPage() {
 
                         <TableCell component="th" scope="row" padding="none">
                           <Stack direction="row" alignItems="center" spacing={2}>
-                            <Avatar alt={name} src={avatarUrl} />
                             <Typography variant="subtitle2" noWrap>
                               {name}
                             </Typography>
                           </Stack>
                         </TableCell>
 
-                        <TableCell align="left">{company}</TableCell>
-
-                        <TableCell align="left">{role}</TableCell>
-
-                        <TableCell align="left">{isVerified ? 'Yes' : 'No'}</TableCell>
-
+                        <TableCell align="left">{date}</TableCell>
+                        <TableCell align="left">{phone}</TableCell>
+                        <TableCell align="left">{count}</TableCell>
                         <TableCell align="left">
                           <Label color={(status === 'banned' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>
