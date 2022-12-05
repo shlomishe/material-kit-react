@@ -9,7 +9,6 @@ import {
   Table,
   Stack,
   Paper,
-  Avatar,
   Button,
   Popover,
   Checkbox,
@@ -89,9 +88,10 @@ export default function UserPage() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const [USERLIST, setUsersList] = useState([]);
+ 
+  const [isFileUpload, setIsFileUpload] = useState(false);
 
-
-  const readUploadFile = (e) => {
+    const readUploadFile = (e) => {
     e.preventDefault();
     if (e.target.files) {
       const reader = new FileReader();
@@ -113,6 +113,9 @@ export default function UserPage() {
           });
         });
         setUsersList(userList);
+        if (userList.length) {
+          setIsFileUpload(true);
+        }
       };
       reader.readAsArrayBuffer(e.target.files[0]);
     }
@@ -177,10 +180,24 @@ export default function UserPage() {
 
   const isNotFound = !filteredUsers.length && !!filterName;
 
+  const onUploadFileHandler = async () => {
+    let response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'POST',
+      body: JSON.stringify({
+         title: title,
+         body: body,
+         userId: Math.random().toString(36).slice(2),
+      }),
+      headers: {
+         'Content-type': 'application/json; charset=UTF-8',
+      },
+   });
+  }
+
   return (
     <>
       <Helmet>
-        <title> User | Minimal UI </title>
+        <title> wedding </title>
       </Helmet>
 
       <Container>
@@ -188,12 +205,8 @@ export default function UserPage() {
           <Typography variant="h4" gutterBottom>
             רשימת מוזמנים
           </Typography>
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />}>
-            New User
-          </Button>
-
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />}>
-            יבוא מוזמנים
+          <Button onClick={onUploadFileHandler} disabled={!isFileUpload} variant="contained" startIcon={<Iconify icon="eva:plus-fill" />}>
+            שמור העלאת קובץ
           </Button>
           <input type="file" name="upload" id="upload" onChange={readUploadFile} />
         </Stack>
